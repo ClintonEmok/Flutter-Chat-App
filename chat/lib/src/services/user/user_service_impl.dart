@@ -13,9 +13,12 @@ class UserService implements IUserService {
     var data = user.toJson();
     if (user.id != null) data['id'] = user.id;
 
-    final result = await r
-        .table('users')
-        .insert(data, {'conflict': 'update', 'return_changes': true});
+    // Queries the RethinkDB and returns user information
+
+    final result = await r.table('users').insert(data, {
+      'conflict': 'update',
+      'return_changes': true,
+    }).run(_connection);
 
     return User.fromJson(result['changes'].first['new_val']);
   }
@@ -27,8 +30,10 @@ class UserService implements IUserService {
   }
 
   @override
-  Future<List<User>> onLine() {
-    // TODO: implement onLine
-    throw UnimplementedError();
+  Future<List<User>> onLine() async {
+    Cursor users =
+        await r.table('users').filter({'active': true}).run(_connection);
+    final userList = await users.toList();
+    return userList.map((item) => User.fromJson(item)).toList();
   }
 }
